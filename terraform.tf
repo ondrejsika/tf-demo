@@ -15,7 +15,7 @@ data "digitalocean_domain" "default" {
 
 resource "digitalocean_droplet" "example" {
   image    = "debian-10-x64"
-  name     = "example"
+  name     = "foo"
   region   = "fra1"
   size     = "s-1vcpu-1gb"
   ssh_keys = [

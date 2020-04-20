@@ -1,6 +1,9 @@
 variable "base_domain" {}
+variable "do_token" {}
 
-provider "digitalocean" {}
+provider "digitalocean" {
+    token = var.do_token
+}
 
 variable "vm_count" {
   default = 3

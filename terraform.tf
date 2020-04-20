@@ -5,10 +5,6 @@ provider "digitalocean" {
     token = var.do_token
 }
 
-variable "vm_count" {
-  default = 3
-}
-
 data "digitalocean_ssh_key" "default" {
   name = "default"
 }
@@ -18,87 +14,22 @@ data "digitalocean_domain" "default" {
 }
 
 resource "digitalocean_droplet" "example" {
-  count = var.vm_count
-
   image    = "debian-10-x64"
-  name     = "example${count.index}"
+  name     = "example"
   region   = "fra1"
   size     = "s-1vcpu-1gb"
   ssh_keys = [
     data.digitalocean_ssh_key.default.fingerprint
   ]
-
-  connection {
-    type = "ssh"
-    user = "root"
-    host = self.ipv4_address
-  }
-
-  provisioner "remote-exec" {
-    inline = [
-      "apt-get update",
-      "apt-get install -y nginx",
-    ]
-  }
-
-  provisioner "file" {
-    source      = "index.html"
-    destination = "/var/www/html/index.html"
-  }
-
-  provisioner "local-exec" {
-    command = "curl ${self.ipv4_address}"
-  }
-
-  provisioner "local-exec" {
-    when    = destroy
-    command = "curl ${self.ipv4_address}"
-  }
 }
 
 resource "digitalocean_record" "example" {
-  count = var.vm_count
   domain = data.digitalocean_domain.default.name
   type   = "A"
-  name   = digitalocean_droplet.example[count.index].name
-  value  = digitalocean_droplet.example[count.index].ipv4_address
+  name   = digitalocean_droplet.example.name
+  value  = digitalocean_droplet.example.ipv4_address
 }
 
-resource "digitalocean_loadbalancer" "public" {
-  name   = "loadbalancer-1"
-  region = "fra1"
-
-  forwarding_rule {
-    entry_port     = 80
-    entry_protocol = "http"
-
-    target_port     = 80
-    target_protocol = "http"
-  }
-
-  healthcheck {
-    port     = 80
-    protocol = "tcp"
-  }
-
-  droplet_ids = [
-    for inst in digitalocean_droplet.example: inst.id
-  ]
-}
-
-resource "digitalocean_record" "lb" {
-  domain = data.digitalocean_domain.default.name
-  type   = "A"
-  name   = "lb"
-  value  = digitalocean_loadbalancer.public.ip
-}
-
-output "vm_domains" {
-  value = [
-    for instance in digitalocean_record.example: instance.fqdn
-  ]
-}
-
-output "lb_domain" {
-  value =  digitalocean_record.lb.fqdn
+output "domain" {
+  value = digitalocean_record.example.fqdn
 }
